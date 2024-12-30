@@ -19,7 +19,7 @@ class User
     #[ORM\Column(length: 255)]
     private ?string $username = null;
 
-    #[ORM\Column(length: 30)]
+    #[ORM\Column(type: 'string')]
     private ?string $password = null;
 
     #[ORM\Column]

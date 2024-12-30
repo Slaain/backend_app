@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\RoleRepository;
+use App\Entity\User; // Ajout de l'import
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -18,9 +19,6 @@ class Role
     #[ORM\Column(length: 50)]
     private ?string $name = null;
 
-    /**
-     * @var Collection<int, User>
-     */
     #[ORM\ManyToMany(targetEntity: User::class, inversedBy: 'userRoles')]
     private Collection $users;
 
@@ -46,9 +44,6 @@ class Role
         return $this;
     }
 
-    /**
-     * @return Collection<int, User>
-     */
     public function getUsers(): Collection
     {
         return $this->users;
