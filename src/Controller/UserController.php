@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Entity\Role;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Util\Json;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -23,6 +24,7 @@ class UserController extends AbstractController
         $this->entityManager = $entityManager;
     }
 
+    // crée un user
     #[Route('/create', name: 'user_create', methods: ['POST'])]
     public function createUser(Request $request): JsonResponse
     {
@@ -51,6 +53,7 @@ class UserController extends AbstractController
         return new JsonResponse(['message' => 'Utilisateur créé avec succès', 'user_id' => $user->getId()], 201);
     }
 
+    //ajouter un user a un role
     #[Route('/{id}/assign-role/{roleId}', name: 'user_assign_role', methods: ['POST'])]
     public function assignRoleToUser(int $id, int $roleId): JsonResponse
     {
@@ -76,6 +79,7 @@ class UserController extends AbstractController
         return new JsonResponse(['message' => 'Rôle assigné à l\'utilisateur avec succès'], 200);
     }
 
+    //supprimer user
     #[Route('/remove/{id}', name:'user_delete', methods: ['DELETE'])]
     public function removeUser(int $id): JsonResponse
     {
@@ -95,6 +99,7 @@ class UserController extends AbstractController
         return new JsonResponse(['message' => 'Utilisateur supprimé !']);
     }
 
+    //mettre a jour user
     #[Route('/update/{id}', name: 'user_update', methods: ['PUT', 'PATCH'])]
     public function updateUser(Request $request, int $id): JsonResponse
     {
@@ -136,6 +141,7 @@ class UserController extends AbstractController
         return new JsonResponse(['message' => 'Utilisateur mis à jour avec succès'], 200);
     }
 
+    //recuperer un user
     #[Route('/{id}', name: 'user_get', methods: ['GET'])]
     public function getUserById(int $id): JsonResponse
     {
@@ -157,6 +163,8 @@ class UserController extends AbstractController
             'roles' => $roles,
         ], 200);
     }
+
+    //connexion
     #[Route('/login', name: 'api_login', methods: ['POST'])]
     public function login(Request $request, EntityManagerInterface $entityManager, JWTTokenManagerInterface $JWTManager): JsonResponse
     {
@@ -182,6 +190,24 @@ class UserController extends AbstractController
         $token = $JWTManager->create($user);
 
         return new JsonResponse(['token' => $token], 200);
+    }
+        // recuperer tout les user
+    #[Route('', name: 'alluser_get', methods: ['GET'])]
+    public function getUsers(UserRepository $userRepository): JsonResponse
+    {
+        // Récupérer tous les utilisateurs
+        $usersAll = $userRepository->findAll();
+
+        // Construire le tableau de données
+        $data = array_map(function (User $user) {
+            return [
+                'id' => $user->getId(),
+                'username' => $user->getUsername(),
+            ];
+        }, $usersAll);
+
+        // Retourner les données sous forme de JSON
+        return new JsonResponse($data, JsonResponse::HTTP_OK);
     }
 
 
