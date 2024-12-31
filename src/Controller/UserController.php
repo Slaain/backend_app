@@ -10,6 +10,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 #[Route('/user')]
@@ -156,5 +157,32 @@ class UserController extends AbstractController
             'roles' => $roles,
         ], 200);
     }
+    #[Route('/login', name: 'api_login', methods: ['POST'])]
+    public function login(Request $request, EntityManagerInterface $entityManager, JWTTokenManagerInterface $JWTManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        // Vérifie les champs obligatoires
+        if (!isset($data['username'], $data['password'])) {
+            return new JsonResponse(['error' => 'Les champs username et password sont obligatoires'], 400);
+        }
+
+        // Récupérer l'utilisateur à partir du nom d'utilisateur
+        $user = $entityManager->getRepository(User::class)->findOneBy(['username' => $data['username']]);
+        if (!$user) {
+            return new JsonResponse(['error' => 'Utilisateur non trouvé'], 404);
+        }
+
+        // Vérifie le mot de passe
+        if (!password_verify($data['password'], $user->getPassword())) {
+            return new JsonResponse(['error' => 'Mot de passe incorrect'], 401);
+        }
+
+        // Générer le token JWT
+        $token = $JWTManager->create($user);
+
+        return new JsonResponse(['token' => $token], 200);
+    }
+
 
 }
