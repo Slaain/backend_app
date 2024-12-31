@@ -31,9 +31,16 @@ class User
     #[ORM\ManyToMany(targetEntity: Role::class, mappedBy: 'users')]
     private Collection $userRoles;
 
+    /**
+     * @var Collection<int, Project>
+     */
+    #[ORM\ManyToMany(targetEntity: Project::class, mappedBy: 'users')]
+    private Collection $users;
+
     public function __construct()
     {
         $this->userRoles = new ArrayCollection();
+        $this->users = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -99,6 +106,33 @@ class User
     {
         if ($this->userRoles->removeElement($userRole)) {
             $userRole->removeUser($this);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Project>
+     */
+    public function getUsers(): Collection
+    {
+        return $this->users;
+    }
+
+    public function addUser(Project $user): static
+    {
+        if (!$this->users->contains($user)) {
+            $this->users->add($user);
+            $user->addUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeUser(Project $user): static
+    {
+        if ($this->users->removeElement($user)) {
+            $user->removeUser($this);
         }
 
         return $this;
