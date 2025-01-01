@@ -1,42 +1,36 @@
 security:
-    # Configuration pour le hachage des mots de passe
     password_hashers:
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
 
-    # Fournisseurs d'utilisateurs
     providers:
         app_user_provider:
             entity:
                 class: App\Entity\User
                 property: username
 
-    # Configuration des firewalls
     firewalls:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
 
-        # Firewall pour la route de connexion
         login:
             pattern: ^/user/login
             stateless: true
             security: false
 
-        # Firewall pour sécuriser les autres routes API avec JWT
         api:
-            pattern: ^/api
+            pattern: ^/(api|notes)
             stateless: true
             jwt: ~
 
-        # Firewall principal pour les sections non-API
         main:
             lazy: true
             provider: app_user_provider
 
-    # Règles d'accès
     access_control:
         - { path: ^/user/login, roles: IS_AUTHENTICATED_ANONYMOUSLY }
-        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/(api|notes), roles: IS_AUTHENTICATED_FULLY }
+
 when@test:
     security:
         password_hashers:

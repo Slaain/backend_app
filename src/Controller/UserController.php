@@ -189,7 +189,7 @@ class UserController extends AbstractController
         // Générer le token JWT
         $token = $JWTManager->create($user);
 
-        return new JsonResponse(['token' => $token], 200);
+        return new JsonResponse(['token' => $token,'username' => $user->getUsername()], 200);
     }
         // recuperer tout les user
     #[Route('', name: 'alluser_get', methods: ['GET'])]

@@ -27,9 +27,16 @@ class Project
     #[ORM\ManyToMany(targetEntity: User::class, inversedBy: 'users')]
     private Collection $users;
 
+    /**
+     * @var Collection<int, Note>
+     */
+    #[ORM\OneToMany(targetEntity: Note::class, mappedBy: 'project')]
+    private Collection $projectNotes;
+
     public function __construct()
     {
         $this->users = new ArrayCollection();
+        $this->projectNotes = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -81,6 +88,36 @@ class Project
     public function removeUser(User $user): static
     {
         $this->users->removeElement($user);
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Note>
+     */
+    public function getProjectNotes(): Collection
+    {
+        return $this->projectNotes;
+    }
+
+    public function addProjectNote(Note $projectNote): static
+    {
+        if (!$this->projectNotes->contains($projectNote)) {
+            $this->projectNotes->add($projectNote);
+            $projectNote->setProject($this);
+        }
+
+        return $this;
+    }
+
+    public function removeProjectNote(Note $projectNote): static
+    {
+        if ($this->projectNotes->removeElement($projectNote)) {
+            // set the owning side to null (unless already changed)
+            if ($projectNote->getProject() === $this) {
+                $projectNote->setProject(null);
+            }
+        }
 
         return $this;
     }

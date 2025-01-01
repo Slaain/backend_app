@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 
-#[Route('/api/projects')]
+#[Route('/projects')]
 class ProjectController extends AbstractController
 {
     private EntityManagerInterface $entityManager;
@@ -42,12 +42,21 @@ class ProjectController extends AbstractController
                 'project' => $project->getProject(),
                 'description' => $project->getDescription(),
                 'users' => $project->getUsers()->map(fn(User $user) => $user->getUsername())->toArray(),
+                'notes' => $project->getProjectNotes()->map(function ($note) {
+                    return [
+                        'id' => $note->getId(),
+                        'content' => $note->getContent(),
+                        'users' => $note->getUsers(),
+                        'createdAt' => $note->getCreatedAt()->format('Y-m-d H:i:s'),
+                    ];
+                })->toArray(),
             ];
         }, $projects);
 
         // Retourner les projets sous forme de réponse JSON
         return new JsonResponse($data, JsonResponse::HTTP_OK);
     }
+
 
     /**
      * Crée un nouveau projet.
