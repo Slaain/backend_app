@@ -76,8 +76,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function getRoles(): array
     {
-        return $this->roles;
+        // Commence par les rôles définis dans le tableau $roles
+        $roles = $this->roles;
+
+        // Ajoute les rôles associés via la relation ManyToMany
+        foreach ($this->userRoles as $role) {
+            if (!in_array($role->getName(), $roles)) {
+                $roles[] = $role->getName();
+            }
+        }
+
+        return $roles;
     }
+
 
     public function setRoles(array $roles): static
     {
@@ -94,15 +105,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->userRoles;
     }
 
-    public function addUserRole(Role $userRole): static
+    public function addUserRole(Role $role): static
     {
-        if (!$this->userRoles->contains($userRole)) {
-            $this->userRoles->add($userRole);
-            $userRole->addUser($this);
+        if (!$this->userRoles->contains($role)) {
+            $this->userRoles->add($role);
+            $role->addUser($this); // Assurer la relation inverse
         }
 
         return $this;
     }
+
 
     public function removeUserRole(Role $userRole): static
     {

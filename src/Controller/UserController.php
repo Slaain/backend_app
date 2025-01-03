@@ -6,13 +6,12 @@ use App\Entity\User;
 use App\Entity\Role;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use PHPUnit\Util\Json;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/user')]
 class UserController extends AbstractController
@@ -24,37 +23,35 @@ class UserController extends AbstractController
         $this->entityManager = $entityManager;
     }
 
-    // crée un user
-    #[Route('/create', name: 'user_create', methods: ['POST'])]
+    // Création d'un utilisateur, accessible uniquement aux utilisateurs ADMIN
+    #[Route('/admin/create', name: 'user_create', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants')]
     public function createUser(Request $request): JsonResponse
     {
-        // Récupérer les données de la requête
         $data = json_decode($request->getContent(), true);
 
-        // Vérifier les champs obligatoires
         if (!isset($data['username'], $data['password'])) {
             return new JsonResponse(['error' => 'Les champs username et password sont requis'], 400);
         }
+
         $existingUser = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $data['username']]);
         if ($existingUser) {
-            return new JsonResponse(['error' => 'Un utilisateru existe déjà'], 400);
+            return new JsonResponse(['error' => 'Un utilisateur existe déjà'], 400);
         }
 
-        // Créer un nouvel utilisateur
         $user = new User();
         $user->setUsername($data['username']);
-        $user->setPassword(password_hash($data['password'], PASSWORD_BCRYPT)); // Hashage du mot de passe
-        $user->setRoles([]); // Rôles par défaut (vide)
+        $user->setPassword(password_hash($data['password'], PASSWORD_BCRYPT));
 
-        // Sauvegarder l'utilisateur dans la base de données
         $this->entityManager->persist($user);
         $this->entityManager->flush();
 
         return new JsonResponse(['message' => 'Utilisateur créé avec succès', 'user_id' => $user->getId()], 201);
     }
 
-    //ajouter un user a un role
+    // Ajouter un rôle à un utilisateur, accessible uniquement aux utilisateurs ADMIN
     #[Route('/{id}/assign-role/{roleId}', name: 'user_assign_role', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants')]
     public function assignRoleToUser(int $id, int $roleId): JsonResponse
     {
         // Récupérer l'utilisateur
@@ -79,15 +76,15 @@ class UserController extends AbstractController
         return new JsonResponse(['message' => 'Rôle assigné à l\'utilisateur avec succès'], 200);
     }
 
-    //supprimer user
-    #[Route('/remove/{id}', name:'user_delete', methods: ['DELETE'])]
+    // Supprimer un utilisateur, accessible uniquement aux utilisateurs ADMIN
+    #[Route('/remove/{id}', name: 'user_delete', methods: ['DELETE'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants')]
     public function removeUser(int $id): JsonResponse
     {
         // Récupérer l'utilisateur à partir de l'ID
         $user = $this->entityManager->getRepository(User::class)->find($id);
 
         if (!$user) {
-            // Si l'utilisateur n'existe pas, retourner une erreur 404
             return new JsonResponse(['error' => 'Utilisateur non trouvé'], 404);
         }
 
@@ -95,12 +92,12 @@ class UserController extends AbstractController
         $this->entityManager->remove($user);
         $this->entityManager->flush();
 
-        // Retourner une réponse confirmant la suppression
         return new JsonResponse(['message' => 'Utilisateur supprimé !']);
     }
 
-    //mettre a jour user
+    // Mettre à jour un utilisateur, accessible uniquement aux utilisateurs ADMIN
     #[Route('/update/{id}', name: 'user_update', methods: ['PUT', 'PATCH'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants')]
     public function updateUser(Request $request, int $id): JsonResponse
     {
         // Récupérer l'utilisateur à partir de l'ID
@@ -141,8 +138,9 @@ class UserController extends AbstractController
         return new JsonResponse(['message' => 'Utilisateur mis à jour avec succès'], 200);
     }
 
-    //recuperer un user
+    // Récupérer un utilisateur par son ID, accessible uniquement aux utilisateurs AUTHENTIFIÉS
     #[Route('/{id}', name: 'user_get', methods: ['GET'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY', message: 'Vous devez être authentifié pour accéder à ces informations')]
     public function getUserById(int $id): JsonResponse
     {
         // Récupérer l'utilisateur à partir de l'ID
@@ -157,14 +155,13 @@ class UserController extends AbstractController
             return $role->getName();
         })->toArray();
 
-        // Retourner les données utilisateur
         return new JsonResponse([
             'username' => $user->getUsername(),
             'roles' => $roles,
         ], 200);
     }
 
-    //connexion
+    // Connexion - Ne nécessite pas de rôle, tout utilisateur valide peut se connecter
     #[Route('/login', name: 'api_login', methods: ['POST'])]
     public function login(Request $request, EntityManagerInterface $entityManager, JWTTokenManagerInterface $JWTManager): JsonResponse
     {
@@ -189,26 +186,26 @@ class UserController extends AbstractController
         // Générer le token JWT
         $token = $JWTManager->create($user);
 
-        return new JsonResponse(['token' => $token,'username' => $user->getUsername()], 200);
+        return new JsonResponse(['token' => $token, 'username' => $user->getUsername(), 'roles' => $user->getRoles()], 200);
     }
-        // recuperer tout les user
+
+    // Récupérer tous les utilisateurs, accessible uniquement aux utilisateurs AUTHENTIFIÉS
     #[Route('', name: 'alluser_get', methods: ['GET'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY', message: 'Vous devez être authentifié pour accéder à cette ressource')]
     public function getUsers(UserRepository $userRepository): JsonResponse
     {
         // Récupérer tous les utilisateurs
         $usersAll = $userRepository->findAll();
 
-        // Construire le tableau de données
         $data = array_map(function (User $user) {
             return [
                 'id' => $user->getId(),
                 'username' => $user->getUsername(),
+                'roles' => $user->getRoles(),
+
             ];
         }, $usersAll);
 
-        // Retourner les données sous forme de JSON
         return new JsonResponse($data, JsonResponse::HTTP_OK);
     }
-
-
 }
