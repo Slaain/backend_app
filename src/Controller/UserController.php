@@ -180,7 +180,7 @@ class UserController extends AbstractController
 
         // Vérifie le mot de passe
         if (!password_verify($data['password'], $user->getPassword())) {
-            return new JsonResponse(['error' => 'Mot de passe incorrect'], 401);
+            return new JsonResponse(['error' => 'Mot de passe incorrect:::::'], 401);
         }
 
         // Générer le token JWT
